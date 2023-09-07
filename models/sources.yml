@@ -1,0 +1,49 @@
+version: 2
+
+definitions:
+  descriptions:
+    - description: &crs
+        A 3-character code (Computer Reservation System) used for stations. Also referred to as 3-Alpha Codes or NRS (National Reservation System) codes.
+    - description: &tiploc
+        TIPLOC (Timing Point Location) - Codes relating to points used in deriving train schedules.
+    - description: &loc__name
+        The name of a location in CAPS.
+    - description: &stanox
+        '{{ doc("stanox") }}'
+    - description: &lon
+        Longitude of the location.
+    - description: &lat
+        Latitude of the location.
+    - description: &address
+        The address of a station.
+    - description: &office_region
+        The office region of a station.
+    - description: &county
+        The county in which a station is located.
+    - description: &district
+        The district in which a station is located.
+    - description: &spacial_unit
+        The NUTS2 spacial unit in which a station is located.
+
+sources:
+  - name: openrail
+    config:
+      quote_columns: true
+
+
+    database: apprenticeship-dwh-db
+    schema: solutions
+    tables:
+      - name: raw_movements
+        description: Source that represents raw movement records.
+        identifier: raw__movements
+        # TODO: configure source
+      # - name: # name in model
+      #   description: # source description
+      #   identifier: # table name in the data warehouse
+      #   columns: # TODO: add columns
+      #   - name: # column_name
+      #     description: # description of the column
+      - name: raw_schedules
+        description: Source that represents raw schedule records.
+        identifier: raw__schedules

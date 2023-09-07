@@ -1,0 +1,596 @@
+version: 2
+
+definitions:
+  tests:
+    - test: &primary_key
+        - not_null
+        - unique
+  descriptions:
+    - description: &toc__pk
+        Primary key for this record, derived from toc_id and atoc_code.
+    - description: &toc__name
+        The name of the train operating company.    
+    - description: &toc_id
+        The sector code used to represent the TOC in TRUST messages (Movements feed). Do keep in mind, this code is not unique!
+    - description: &obfuscated
+        Companies that publish obfuscated data are indicated with True.
+    - description: &train_status
+        '{{ doc("train_status") }}'
+    - description: &crs
+        A 3-character code (Computer Reservation System) used for stations. Also referred to as 3-Alpha Codes or NRS (National Reservation System) codes.
+    - description: &tiploc
+        TIPLOC (Timing Point Location) - Codes relating to points used in deriving train schedules.
+    - description: &loc__name
+        The name of a location in CAPS.
+    - description: &stanox
+        '{{ doc("stanox") }}'
+    - description: &lon
+        Longitude of the location.
+    - description: &lat
+        Latitude of the location.
+    - description: &address
+        The address of a station.
+    - description: &office_region
+        The office region of a station.
+    - description: &county
+        The county in which a station is located.
+    - description: &district
+        The district in which a station is located.
+    - description: &spacial_unit
+        The NUTS2 spacial unit in which a station is located.
+    - description: &train_id
+        '{{ doc("train_id") }}'
+    - description: &sched_origin_stanox
+        STANOX code for the originating location in the schedule. (See locations > stanox for more details on stanox)
+    - description: &origin_dep_ts
+        The Working TimeTables (WTT) time of departure from the originating location. A UNIX timestamp since the UNIX epoch, in UTC.
+    - description: &train_uid
+        The unique ID of the schedule being activated - either a letter and five numbers, or a space and five numbers for VSTP trains.
+    - description: &schedule_start_date
+        The start date of the schedule.       
+    - description: &event_type
+        The type of event - either "ARRIVAL" or "DEPARTURE".
+    - description: &original_loc_stanox
+        If the location has been revised, the STANOX of the location in the schedule at activation time, if applicable. (See location > stanox for more details)
+    - description: &original_loc_ts
+        The planned time associated with the original location, if applicable.
+    - description: &planned_ts
+        The planned date and time that this event was due to happen at this location, if applicable.
+    - description: &timetable_variation
+        The number of minutes variation from the scheduled time at this location. Off-route reports will contain "0".
+    - description: &actual_ts
+        The date and time that this event happened at the location.
+    - description: &platform
+        Two characters (including a space for a single character) or blank if the movement report is associated with a platform number.
+    - description: &train_terminated
+        Set to "true" if the train has completed its journey, or "false" otherwise.
+    - description: &variation_status
+        One of "ON TIME", "EARLY", "LATE" or "OFF ROUTE".
+    - description: &loc_stanox
+        The STANOX of the location at which this event happened. (See location > stanox for more details)
+    - description: &schedule_days_runs
+        A seven-character field; character 1 represents Monday, character 7 represents Sunday. A 1 in a character position means that the service runs on that day, while a 0 means that it does not.
+    - description: &planned_event_type
+        The planned type of event - one of "ARRIVAL", "DEPARTURE" or "DESTINATION".
+    - description: &train_category
+        The CIF_train_category code.
+    - description: &power_type
+        '{{ doc("power_type") }}'
+    - description: &speed
+        Planned speed of the train service.
+    - description: &operating_characteristics
+        '{{ doc("oper_char") }}'
+    - description: &train_class
+        '{{ doc("class") }}'
+    - description: &sleepers
+        '{{ doc("sleepers") }}'
+    - description: &reservations
+        '{{ doc("reservations") }}'
+    - description: &catering_code
+        '{{ doc("catering") }}'
+    - description: &stp_ind
+        '{{ doc("stp") }}'
+    - description: &fk_time
+        The foreign key linking to dim__time, derived from the hour and minute of the time.       
+    - description: &train_category_description
+        The detailed description of the service.
+    - description: &train_category_type
+        The type of train service per code.
+    - description: &schedule__pk
+        Primary key for this record, derived from CIF_train_uid, CIF_stp_indicator and schedule_start_date.
+    - description: &schedule__fk
+        Foreign key linking this record to the schedules, derived from train_uid, schedule_type and schedule_start_date.                      
+    - description: &event_time
+        A timestamp to indicate when records where inserted, so that no duplicate records are in the final table.
+    - description: &date__fk
+        The foreign key linking this record to the date, derived from the year, month and day of the date. This field is padded with zeroes.
+models:
+  - name: stg__companies
+    description: Staged view that represents cleaned and correctly casted train operating company records.
+    columns:
+      - name: pk
+        description: *toc__pk
+        tests: *primary_key
+      - name: name
+        description: *toc__name
+        tests: *primary_key
+      - name: obfuscated
+        description: *obfuscated
+        tests: 
+          - not_null
+          - accepted_values:
+              values: ['true', 'false']
+  # TODO: staging model for the locations
+  - name: stg__movement
+    description: Staged view that represents correctly casted movement records.
+    columns:
+      - name: msg_type
+        description: '{{ doc("msg_type") }}'
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['0001', '0002', '0003', '0005', '0006', '0007', '0008']
+  - name: stg__schedule
+    description: Staged view that represents cleaned and correctly casted schedule records.
+    columns:
+      - name: pk
+        tests: *primary_key
+        description: *schedule__pk
+      - name: CIF_train_uid
+        quote: true
+        description: *train_uid
+        tests:
+          - not_null
+      - name: schedule_start_date
+        description: *schedule_start_date
+        tests:
+          - not_null
+      - name: schedule_days_runs
+        description: *schedule_days_runs
+        tests:
+          - not_null
+      - name: train_status
+        description: *train_status
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['B', 'F', 'P', 'S', 'T', '1', '2', '3', '4', '5', ' ']
+      - name: CIF_train_category
+        description: *train_category
+        quote: true
+        tests:
+          - not_null
+      - name: CIF_power_type
+        quote: true
+        description: *power_type
+      - name: CIF_speed
+        quote: true
+        description: *speed
+      - name: CIF_operating_characteristics
+        quote: true
+        description: *operating_characteristics
+      - name: CIF_train_class
+        quote: true
+        description: *train_class
+      - name: CIF_sleepers
+        quote: true
+        description: *sleepers
+      - name: CIF_reservations
+        quote: true
+        description: *reservations
+      - name: CIF_catering_code
+        quote: true
+        description: *catering_code
+      - name: CIF_stp_indicator
+        quote: true
+        description: *stp_ind
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['C', 'N', 'O', 'P']
+      - name: atoc_code
+        description: The two-character code used to represent the TOC in the SCHEDULE feed. Non-passenger operators are represented by an ATOC code of ZZ and are subject to obfuscation in the SCHEDULE feed (with the exception of GB Railfreight services).
+        tests:
+          - not_null
+      - name: schedule_location
+        description: '{{ doc("schedule_location") }}'
+  - name: stg__train_categories
+    description: Staged view that represents cleaned and correctly casted train category records.
+    columns:
+      - name: code
+        description: *train_category
+        quote: true
+        tests: *primary_key
+      - name: type
+        description: *train_category_type
+        quote: true
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Ordinary Passenger Trains', 'Express Passenger Trains', 'Buses & Ships', 'Parcels and Postal Trains', 'Departmental Trains', 'Light Locomotives', 'Railfreight Distribution', 'Trainload Freight', 'Railfreight Distribution (Channel Tunnel)']
+      - name: description
+        quote: true
+        description: *train_category_description
+        tests: *primary_key
+  - name: int__all_movement_messages_without_cancellations_and_route_changes
+    description: Intermediate view that represents all movement records that are not cancelled, reinstated or had any changes happen to their route.
+    columns:
+      - name: event_type
+        description: *event_type
+      - name: original_loc_stanox
+        description: *original_loc_stanox
+      - name: original_loc_timestamp
+        description: *original_loc_ts
+      - name: planned_timestamp
+        description: *planned_ts
+      - name: timetable_variation
+        description: *timetable_variation
+      - name: actual_timestamp
+        description: *actual_ts
+      - name: platform
+        description: *platform
+      - name: train_terminated
+        description: *train_terminated
+      - name: train_id
+        description: *train_id
+      - name: variation_status
+        description: *variation_status
+      - name: toc_id
+        description: *toc_id
+      - name: loc_stanox
+        description: *loc_stanox
+      - name: planned_event_type
+        description: *planned_event_type
+      - name: tiploc
+        description: *tiploc
+  - name: int__activations
+    description: Intermediate view that represents cleaned activation records.
+    columns:
+      - name: fk_schedule
+        description: *schedule__fk
+        tests:
+          - not_null
+      - name: train_id
+        description: *train_id
+        tests:
+          - not_null
+      - name: toc_id
+        description: *toc_id
+        tests:
+          - not_null
+      - name: sched_origin_stanox
+        description: *sched_origin_stanox
+        tests:
+          - not_null
+      - name: origin_dep_timestamp
+        description: *origin_dep_ts
+        tests:
+          - not_null
+      - name: train_uid
+        description: *train_uid
+        tests: 
+          - not_null
+      - name: schedule_start_date
+        description: *schedule_start_date
+        tests:
+          - not_null
+      - name: schedule_end_date
+        description: The end date of the schedule.
+        tests:
+          - not_null
+      - name: schedule_type
+        description: *stp_ind
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['C', 'N', 'O', 'P']
+      - name: tp_origin_timestamp
+        description: '{{ doc("tp_origin") }}'
+        tests:
+          - not_null
+  - name: int__movement
+    description: Intermediate view that represents cleaned movement records.
+    columns:
+      - name: event_type
+        description: *event_type
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ARRIVAL', 'DEPARTURE']
+      - name: original_loc_stanox
+        description: *original_loc_stanox
+      - name: original_loc_timestamp
+        description: *original_loc_ts
+      - name: planned_timestamp
+        description: *planned_ts
+      - name: timetable_variation
+        description: *timetable_variation
+        tests: 
+          - not_null
+      - name: actual_timestamp
+        description: *actual_ts
+        tests:
+          - not_null
+      - name: platform
+        description: *platform
+      - name: train_terminated
+        description: *train_terminated
+        tests:
+          - not_null
+      - name: train_id
+        description: *train_id
+        tests:
+          - not_null
+      - name: variation_status
+        description: *variation_status
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ON TIME', 'EARLY', 'LATE', 'OFF ROUTE']
+      - name: toc_id
+        description: *toc_id
+        tests:
+          - not_null
+      - name: loc_stanox
+        description: *loc_stanox
+        tests:
+          - not_null
+      - name: planned_event_type
+        description: *planned_event_type
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ARRIVAL', 'DEPARTURE', 'DESTINATION']
+      # TODO: add new fields
+  - name: int__movement_uniq
+    description: Intermediate incremental table that represents cleaned route summary records. Routes ongoing are not included.
+    columns:
+      - name: train_id
+        description: *train_id
+        tests:
+          - not_null
+      - name: planned_start_timestamp
+        description: The moment at which the train was scheduled to depart the first location.
+        tests:
+          - not_null
+      - name: delay_start
+        description: The delay of the train at the first location.
+        tests:
+          - not_null
+      - name: delay_status_start
+        description: *timetable_variation
+        tests:
+          - not_null
+      - name: actual_start_timestamp
+        description: The moment at which the train actually departed from the first location.
+        tests:
+          - not_null
+      - name: planned_end_timestamp
+        description: The moment at which the train was scheduled to arrive at the last location.
+        tests:
+          - not_null
+      - name: delay_end
+        description: The delay of the train at the last location.
+        tests:
+          - not_null
+      - name: delay_status_end
+        description: *timetable_variation
+        tests:
+          - not_null
+      - name: actual_end_timestamp
+        description: The moment at which the train actually arrived at the last location.
+        tests:
+          - not_null
+      - name: event_time
+        description: *event_time
+        tests:
+          - not_null
+      # TODO: add location primary keys
+  - name: int__other_messages
+    description: Intermediate view that represents all the records that need to be filtered out.
+    columns:
+      - name: train_id_date
+        description: A value derived from train_id and date. Both of these need to be taken in regard as one day the train with id x can drive, but the other day it may not.
+  - name: int__route
+    description: Intermediate view that represents clean schedule location summary records.
+    columns:
+      - name: pk
+        description: *schedule__fk
+        tests: 
+          - not_null
+
+      - name: start_loc_fk
+        description: *tiploc
+        tests: 
+          - not_null
+      - name: start_platform
+        description: *platform
+      - name: fk_arrival_time
+        description: *fk_time
+        tests: 
+          - not_null
+      - name: end_platform
+        description: *platform
+      - name: leg_number
+        description: The index of the location in the schedule_location array, starting from 1.
+        tests: 
+          - not_null
+      # TODO: add location fields, make some changes
+  - name: int__scheduled_train_info
+    description: Intermediate view that represents scheduled trains.
+    columns:
+      - name: train_id
+        description: *train_id
+        tests:
+          - not_null
+      - name: schedule_days_runs
+        description: *schedule_days_runs
+        tests:
+          - not_null
+      - name: CIF_power_type
+        quote: true
+        description: *power_type
+      - name: CIF_speed
+        quote: true
+        description: *speed
+      - name: CIF_operating_characteristics
+        quote: true
+        description: *operating_characteristics
+      - name: CIF_train_class
+        quote: true
+        description: *train_class
+      - name: CIF_sleepers
+        quote: true
+        description: *sleepers
+      - name: CIF_reservations
+        quote: true
+        description: *reservations
+      - name: CIF_catering_code
+        quote: true
+        description: *catering_code
+      - name: pk
+        description: *schedule__pk
+      - name: CIF_train_category
+        quote: true
+        description: *train_category
+        tests:
+          - not_null
+      - name: fk_toc
+        description: The foreign key to the train operating company dimension.
+      - name: event_time
+        description: *event_time
+  - name: dim__date
+    description: Dimension table that represents date records. 
+    columns:
+      - name: pk_yyyymmdd
+        description: The primary key for this record, derived from the year, month and day of the date. This field is padded with zeroes.
+        tests: *primary_key
+      - name: year
+        description: The year of the date.
+      - name: month
+        description: The month of the date.
+      - name: month_int
+        description: The month of the date as a number.
+      - name: weekday
+        description: The day of the week.
+      - name: day_int
+        description: The day as a number.
+      - name: week_int
+        description: The week of the date.
+      - name: weekday_int
+        description: The day of the week as a number. Monday is represented as 1, Sunday is represented as 7.
+      - name: quarter
+        description: The fiscal quarter of the date as a number.
+  # TODO: dimensional model for the locations
+  - name: dim__scheduled_train_info
+    description: Incremental dimension table that represents conceptual scheduled trains.
+    columns:
+      - name: train_id
+        description: *train_id
+      - name: pk
+        description: *schedule__pk
+      - name: CIF_train_category
+        description: *train_category
+        quote: true
+      - name: fk_toc
+        description: *toc__pk
+      - name: event_time
+        description: *event_time
+      - name: schedule_days_runs
+        description: *schedule_days_runs
+        tests:
+          - not_null
+      - name: CIF_power_type
+        quote: true
+        description: *power_type
+      - name: CIF_speed
+        quote: true
+        description: *speed
+      - name: CIF_operating_characteristics
+        quote: true
+        description: *operating_characteristics
+      - name: CIF_train_class
+        quote: true
+        description: *train_class
+      - name: CIF_sleepers
+        quote: true
+        description: *sleepers
+      - name: CIF_reservations
+        quote: true
+        description: *reservations
+      - name: CIF_catering_code
+        quote: true
+        description: *catering_code
+  - name: dim__time
+    description: Dimension table that represents time records.
+    columns:
+      - name: pk_hhmm
+        description: The primary key for this record, derived from the hour and minute of the time. This field is always padded with zeroes.
+      - name: hour
+        description: The hour of the time as a number. We use 24 hours in a day, so this will range from 0 to 23.
+      - name: minute
+        description: The minute of the time as a number.
+  - name: dim__train_categories
+    description: Dimension table that represents train categories.
+    columns:
+      - name: code
+        description: *train_category
+      - name: description
+        description: *train_category_description
+      - name: type
+        description: *train_category_type
+  - name: dim__train_operating_company
+    description: Dimension table that represents train operating company records.
+    columns:
+      - name: pk
+        description: *toc__pk
+        tests: *primary_key
+      - name: name
+        description: *toc__name
+        tests: *primary_key
+      - name: obfuscated
+        description: *obfuscated
+        tests: 
+          - not_null
+          - accepted_values:
+              values: ['true', 'false']
+  - name: fct__movements
+    description: Fact table for our solution, representing the facts of our solution.
+    columns:
+      - name: fk_train_info
+        description: *schedule__fk
+      - name: fk_toc
+        description: *toc__pk
+      - name: fk_loc_start
+        description: *loc_stanox
+      - name: fk_loc_end
+        description: *loc_stanox
+      - name: fk_hhmm_scheduled_start
+        description: *fk_time
+      - name: fk_hhmm_actual_start
+        description: *fk_time
+      - name: fk_hhmm_scheduled_end
+        description: *fk_time
+      - name: fk_hhmm_actual_end
+        description: *fk_time
+      - name: fk_yyyymmdd_scheduled_start
+        description: *date__fk
+      - name: fk_yyyymmdd_actual_start
+        description: *date__fk
+      - name: fk_yyyymmdd_scheduled_end
+        description: *date__fk
+      - name: fk_yyyymmdd_actual_end
+        description: *date__fk
+      - name: delay_at_departure
+        description: The delay at the first station in minutes.
+      - name: total_delay
+        description: The delay at the end station in minutes.
+      - name: theoretical_journey_duration
+        description: The theoretical duration of the journey in minutes.
+      - name: actual_journey_duration
+        description: The actual duration of the journey in minutes.
+      - name: category_type
+        description: *train_category
+      - name: event_time
+        description: *event_time
+      # TODO: add primary keys for location

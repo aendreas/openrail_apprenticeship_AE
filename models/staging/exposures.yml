@@ -1,0 +1,68 @@
+version: 2
+
+exposures:
+
+  - name: openrail_dashboard
+    label: The Openrail Dashboard
+    type: dashboard
+    maturity: low
+    url: https://bi.tool/dashboards/1
+    description: Train delays per route, station, time...
+
+    depends_on:
+      - ref('fct__movements')
+      - ref('dim__date')
+      - ref('dim__location')
+      - ref('dim__scheduled_train_info')
+      - ref('dim__time')
+      - ref('dim__train_categories')
+      - ref('dim__train_operating_company')
+      # - metric('count_orders')
+
+    owner:
+      name: AE Data Engineers
+      email: data.engineers@ae.be
+
+metrics:
+  - name: journeys_finished
+    label: Journeys Finished
+    model: ref('fct__movements')
+    description: The amount of journey finished.
+
+    calculation_method: count
+    expression: train_id
+
+    # timestamp: order_date
+    # time_grains: [day, week, month, quarter, year]
+
+    dimensions:
+      - dim__date
+      - dim__location
+      - dim__scheduled_train_info
+      - dim__time
+      - dim__train_categories
+      - dim__train_operating_company
+    
+    # window:
+    #   count: 14
+    #   period: day
+
+    # filters:
+    #   - field: is_paying
+    #     operator: 'is'
+    #     value: 'true'
+    #   - field: lifetime_value
+    #     operator: '>='
+    #     value: '100'
+    #   - field: company_name
+    #     operator: '!='
+    #     value: "'Acme, Inc'"
+    #   - field: signup_date
+    #     operator: '>='
+    #     value: "'2020-01-01'"
+        
+    # general properties
+    # config:
+    #   enabled: true | false
+    #   treat_null_values_as_zero: true | false
+

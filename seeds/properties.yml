@@ -1,0 +1,36 @@
+version: 2
+
+seeds:
+  - name: companies
+    config-version:
+      enabled: true
+      tags: [companies, company, toc, train operating company]
+      schema: solutions
+      quote_columns: true
+      persist_docs: # Stores descriptions in the database!!
+        relation: true
+        columns: true
+    columns:
+      - name: Company Name
+        description: The name of the train operating company.
+      - name: Sector Code
+        description: The sector code used to represent the TOC in TRUST messages (Movements feed).
+      - name: ATOC Code
+        description: The two-character code used to represent the TOC in the SCHEDULE feed. Non-passenger operators are represented by an ATOC code of ZZ and are subject to obfuscation in the SCHEDULE feed (with the exception of GB Railfreight services).
+      - name: Whitelisted
+        description: This field means that the sector code is 'whitelisted' and TRUST messages are published for these operators without obfuscation. Sector codes which are not whitelisted will be obfuscated and TRUST messages are published for these operators with sector code 00.
+  - name: train_category
+    config-version:
+      enabled: true
+      schema: solutions
+      quote_columns: true
+      persist_docs: # Stores descriptions in the database!!
+        relation: true
+        columns: true
+    columns:
+      - name: Code
+        description: The CIF_train_category code.
+      - name: Type
+        description: The type of service per code.
+      - name: Description
+        description: The detailed description of the service.
