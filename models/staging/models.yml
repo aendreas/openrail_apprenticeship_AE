@@ -554,7 +554,7 @@ models:
           - not_null
           - accepted_values:
               values: ['true', 'false']
-  - name: fct__movements
+  - name: fct__routes
     description: Fact table for our solution, representing the facts of our solution.
     columns:
       - name: fk_train_info
