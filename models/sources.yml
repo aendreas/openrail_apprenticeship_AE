@@ -32,7 +32,8 @@ sources:
 
 
     database: apprenticeship-dwh-db
-    schema: solutions
+    TODO: haal deze lijn weg en schrijf het juiste schema hieronder
+    schema: group-X
     tables:
       - name: raw_movements
         description: Source that represents raw movement records.
